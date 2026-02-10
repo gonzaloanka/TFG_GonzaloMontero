@@ -3,8 +3,8 @@ POST http://localhost:3000/api/register
 Content-Type: application/json
 
 {
-  "name": "Gonzalo Test 2",
-  "email": "gonzalo2@test.com",
+  "name": "Gonzalo Test 3",
+  "email": "gonzalo3@test.com",
   "password": "mipassword123"
 }
 
@@ -13,13 +13,13 @@ POST http://localhost:3000/api/login
 Content-Type: application/json
 
 {
-  "email": "gonzalo2@test.com",
-  "password": "mipassword123"
+  "email": "a@mail.com",
+  "password": "1234567"
 }
 
 ### CREAR PARTIDO (admin Bearer token)
 POST http://localhost:3000/api/partidos
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTg5OWQzNjdmZmQwMDc2MzljNjc5NmMiLCJlbWFpbCI6ImdvbnphbG8yQHRlc3QuY29tIiwiaWF0IjoxNzcwNjI3NTU4LCJleHAiOjE3NzEyMzIzNTh9.Kt7rgk0Qx_rWYPtuORLfLjPGyr7-vfPK5YS5ghzWYjY
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OThiMTcyODMwYzA1NDlmZDlkNjQxZWIiLCJlbWFpbCI6ImFAbWFpbC5jb20iLCJpYXQiOjE3NzA3MjM3NjEsImV4cCI6MTc3MTMyODU2MX0.7_3E2VUeUDbIxct8XpsiKs0jLrJaW53Duo9yK0tzaXw
 Content-Type: application/json
 
 {

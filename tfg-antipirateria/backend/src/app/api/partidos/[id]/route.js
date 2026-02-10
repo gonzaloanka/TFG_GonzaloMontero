@@ -6,7 +6,6 @@ export async function GET(request, { params }) {
   try {
     await dbConnect();
     
-    // ← FIX: await params
     const { id } = await params;
     
     const partido = await Partido.findById(id)

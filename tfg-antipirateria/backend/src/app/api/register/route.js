@@ -8,7 +8,6 @@ export async function POST(request) {
 
     const { name, email, password } = await request.json();
 
-    // Validaciones básicas
     if (!name || !email || !password) {
       return Response.json(
         { success: false, error: 'Todos los campos son obligatorios' },
@@ -23,7 +22,6 @@ export async function POST(request) {
       );
     }
 
-    // Verificar si usuario ya existe
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return Response.json(
@@ -32,11 +30,9 @@ export async function POST(request) {
       );
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Crear usuario
     const user = await User.create({
       name,
       email,
@@ -55,7 +51,6 @@ export async function POST(request) {
   } catch (error) {
     console.error('Error en /api/register:', error);
     
-    // Capturar error de email duplicado
     if (error.code === 11000) {
       return Response.json(
         { success: false, error: 'Email ya está registrado' },
