@@ -58,17 +58,25 @@ export default function UserMenu() {
 
         {menuOpen && (
           <>
-            {/* Overlay para cerrar al hacer click fuera */}
             <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-
             <div className="absolute right-0 top-full mt-2 w-52 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl z-40 overflow-hidden">
-              {/* Info usuario */}
+
               <div className="px-4 py-3 border-b border-gray-800">
                 <p className="text-sm font-medium text-white truncate">{user.name}</p>
                 <p className="text-xs text-gray-500 truncate">{user.email}</p>
               </div>
 
-              {/* Enlace al panel de admin - solo visible para admins */}
+              <Link
+                href="/perfil"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Mi perfil
+              </Link>
+
               {user.role === 'admin' && (
                 <Link
                   href="/admin"
@@ -83,7 +91,8 @@ export default function UserMenu() {
                 </Link>
               )}
 
-              {/* Cerrar sesión */}
+              <div className="border-t border-gray-800" />
+
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-gray-800 transition"
