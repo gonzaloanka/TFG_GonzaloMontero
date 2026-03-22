@@ -3,6 +3,7 @@ import dbConnect from '../../../../lib/mongodb';
 import Partido from '../../../../models/Partido';
 import { protegerRuta } from '../../../../middleware/auth';
 
+// GET — público, cualquiera puede ver los partidos
 export async function GET() {
   try {
     await dbConnect();
@@ -20,9 +21,17 @@ export async function GET() {
   }
 }
 
+// POST — solo admin puede crear partidos
 export async function POST(request) {
   const errorAuth = protegerRuta(request);
   if (errorAuth) return errorAuth;
+
+  if (request.user.role !== 'admin') {
+    return NextResponse.json(
+      { success: false, error: 'Solo los administradores pueden crear partidos' },
+      { status: 403 }
+    );
+  }
 
   try {
     await dbConnect();
@@ -47,5 +56,3 @@ export async function POST(request) {
     );
   }
 }
-
-
