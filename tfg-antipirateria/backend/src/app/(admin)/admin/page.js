@@ -25,12 +25,17 @@ export default function AdminPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
+  // Modal partido
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPartido, setEditingPartido] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+
+  // Confirmar eliminación
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState(null);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -59,9 +64,11 @@ export default function AdminPage() {
     if (!token) { router.push('/login'); return; }
     const decoded = parseJwt(token);
     if (!decoded || decoded.role !== 'admin') { router.push('/'); return; }
+    setCurrentUserId(decoded.userId);
     Promise.all([fetchPartidos(), fetchUsers()]).finally(() => setLoading(false));
   }, [router, fetchPartidos, fetchUsers]);
 
+  // ── PARTIDOS ──────────────────────────────────────────────────────
   const openCreate = () => {
     setEditingPartido(null);
     setForm(EMPTY_FORM);
@@ -88,22 +95,18 @@ export default function AdminPage() {
     }
     setSaving(true);
     const token = getToken();
-
     try {
-      let res;
-      if (editingPartido) {
-        res = await fetch(`/api/admin/partidos/${editingPartido._id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify(form),
-        });
-      } else {
-        res = await fetch('/api/partidos', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify(form),
-        });
-      }
+      const res = editingPartido
+        ? await fetch(`/api/admin/partidos/${editingPartido._id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(form),
+          })
+        : await fetch('/api/partidos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(form),
+          });
       const data = await res.json();
       if (data.success) {
         showToast(editingPartido ? 'Partido actualizado' : 'Partido creado');
@@ -130,7 +133,7 @@ export default function AdminPage() {
     if (data.success) { showToast('Estado actualizado'); fetchPartidos(); }
   };
 
-  const handleDelete = async (id) => {
+  const handleDeletePartido = async (id) => {
     const token = getToken();
     const res = await fetch(`/api/admin/partidos/${id}`, {
       method: 'DELETE',
@@ -143,6 +146,39 @@ export default function AdminPage() {
       fetchPartidos();
     } else {
       showToast(data.error || 'Error eliminando', 'error');
+    }
+  };
+
+  // ── USUARIOS ──────────────────────────────────────────────────────
+  const handleRoleChange = async (user, newRole) => {
+    const token = getToken();
+    const res = await fetch(`/api/admin/users/${user._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ role: newRole }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`Rol de ${user.name} actualizado a ${newRole}`);
+      fetchUsers();
+    } else {
+      showToast(data.error || 'Error actualizando rol', 'error');
+    }
+  };
+
+  const handleDeleteUser = async (id) => {
+    const token = getToken();
+    const res = await fetch(`/api/admin/users/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Usuario eliminado');
+      setConfirmDeleteUser(null);
+      fetchUsers();
+    } else {
+      showToast(data.error || 'Error eliminando usuario', 'error');
     }
   };
 
@@ -213,7 +249,6 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Contenido */}
       <main className="max-w-7xl mx-auto px-6 py-6">
 
         {/* TAB PARTIDOS */}
@@ -258,7 +293,6 @@ export default function AdminPage() {
                           {partido.streamUrl && <span className="ml-3 text-emerald-600">● Stream activo</span>}
                         </p>
                       </div>
-
                       <div className="flex items-center gap-2">
                         <select
                           value={partido.estado}
@@ -269,22 +303,12 @@ export default function AdminPage() {
                           <option value="en-directo">En Directo</option>
                           <option value="finalizado">Finalizado</option>
                         </select>
-
-                        <button
-                          onClick={() => openEdit(partido)}
-                          className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition"
-                          title="Editar"
-                        >
+                        <button onClick={() => openEdit(partido)} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition" title="Editar">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </button>
-
-                        <button
-                          onClick={() => setConfirmDelete(partido)}
-                          className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
-                          title="Eliminar"
-                        >
+                        <button onClick={() => setConfirmDelete(partido)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition" title="Eliminar">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
@@ -301,7 +325,7 @@ export default function AdminPage() {
         {/* TAB USUARIOS */}
         {activeTab === 'usuarios' && (
           <div>
-            <h2 className="text-xl font-bold mb-6">Usuarios Registrados</h2>
+            <h2 className="text-xl font-bold mb-6">Gestión de Usuarios</h2>
             <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
@@ -310,36 +334,74 @@ export default function AdminPage() {
                     <th className="text-left px-5 py-3">Email</th>
                     <th className="text-left px-5 py-3">Rol</th>
                     <th className="text-left px-5 py-3">Registro</th>
+                    <th className="text-right px-5 py-3">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user, i) => (
-                    <tr key={user._id} className={`hover:bg-gray-800/30 transition ${i < users.length - 1 ? 'border-b border-gray-800/50' : ''}`}>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user._id}`}
-                            alt="avatar"
-                            className="w-8 h-8 rounded-full bg-gray-800 border border-gray-700"
-                          />
-                          <span className="font-medium text-white">{user.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-gray-400">{user.email}</td>
-                      <td className="px-5 py-3">
-                        <span className={`px-2 py-0.5 text-xs rounded-full border font-medium ${
-                          user.role === 'admin'
-                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                            : 'bg-gray-700/50 border-gray-700 text-gray-400'
-                        }`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-gray-500">
-                        {new Date(user.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </td>
-                    </tr>
-                  ))}
+                  {users.map((user, i) => {
+                    const isCurrentUser = user._id === currentUserId;
+                    return (
+                      <tr key={user._id} className={`hover:bg-gray-800/30 transition ${i < users.length - 1 ? 'border-b border-gray-800/50' : ''}`}>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user._id}`}
+                              alt="avatar"
+                              className="w-8 h-8 rounded-full bg-gray-800 border border-gray-700"
+                            />
+                            <div>
+                              <p className="font-medium text-white">{user.name}</p>
+                              {isCurrentUser && <p className="text-xs text-amber-400">Tú</p>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-gray-400">{user.email}</td>
+                        <td className="px-5 py-3">
+                          <span className={`px-2 py-0.5 text-xs rounded-full border font-medium ${
+                            user.role === 'admin'
+                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                              : 'bg-gray-700/50 border-gray-700 text-gray-400'
+                          }`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-gray-500">
+                          {new Date(user.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            {!isCurrentUser && (
+                              <>
+                                {/* Cambiar rol */}
+                                <button
+                                  onClick={() => handleRoleChange(user, user.role === 'admin' ? 'user' : 'admin')}
+                                  className={`px-3 py-1 text-xs rounded-lg border transition ${
+                                    user.role === 'admin'
+                                      ? 'border-gray-700 text-gray-400 hover:border-gray-600 hover:text-white'
+                                      : 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10'
+                                  }`}
+                                  title={user.role === 'admin' ? 'Quitar admin' : 'Hacer admin'}
+                                >
+                                  {user.role === 'admin' ? 'Quitar admin' : 'Hacer admin'}
+                                </button>
+
+                                {/* Eliminar */}
+                                <button
+                                  onClick={() => setConfirmDeleteUser(user)}
+                                  className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
+                                  title="Eliminar usuario"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -347,7 +409,7 @@ export default function AdminPage() {
         )}
       </main>
 
-      {/* MODAL CREAR / EDITAR */}
+      {/* MODAL CREAR / EDITAR PARTIDO */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-40 p-4">
           <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-lg shadow-2xl">
@@ -359,87 +421,52 @@ export default function AdminPage() {
                 </svg>
               </button>
             </div>
-
             <div className="px-6 py-5 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1.5">Equipo Local *</label>
-                  <input
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-emerald-500 focus:outline-none transition"
-                    value={form.equipoLocal}
-                    onChange={e => setForm({ ...form, equipoLocal: e.target.value })}
-                    placeholder="Ej: Real Madrid"
-                  />
+                  <input className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-emerald-500 focus:outline-none transition"
+                    value={form.equipoLocal} onChange={e => setForm({ ...form, equipoLocal: e.target.value })} placeholder="Ej: Real Madrid" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1.5">Equipo Visitante *</label>
-                  <input
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-emerald-500 focus:outline-none transition"
-                    value={form.equipoVisitante}
-                    onChange={e => setForm({ ...form, equipoVisitante: e.target.value })}
-                    placeholder="Ej: Barcelona"
-                  />
+                  <input className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-emerald-500 focus:outline-none transition"
+                    value={form.equipoVisitante} onChange={e => setForm({ ...form, equipoVisitante: e.target.value })} placeholder="Ej: Barcelona" />
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1.5">Fecha y Hora *</label>
-                  <input
-                    type="datetime-local"
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-emerald-500 focus:outline-none transition"
-                    value={form.fecha}
-                    onChange={e => setForm({ ...form, fecha: e.target.value })}
-                  />
+                  <input type="datetime-local" className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-emerald-500 focus:outline-none transition"
+                    value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1.5">Estado</label>
-                  <select
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-emerald-500 focus:outline-none transition"
-                    value={form.estado}
-                    onChange={e => setForm({ ...form, estado: e.target.value })}
-                  >
+                  <select className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-emerald-500 focus:outline-none transition"
+                    value={form.estado} onChange={e => setForm({ ...form, estado: e.target.value })}>
                     <option value="programado">Programado</option>
                     <option value="en-directo">En Directo</option>
                     <option value="finalizado">Finalizado</option>
                   </select>
                 </div>
               </div>
-
               <div>
                 <label className="block text-xs text-gray-500 mb-1.5">URL del Stream (HLS)</label>
-                <input
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-emerald-500 focus:outline-none transition font-mono"
-                  value={form.streamUrl}
-                  onChange={e => setForm({ ...form, streamUrl: e.target.value })}
-                  placeholder="https://ejemplo.com/stream.m3u8"
-                />
+                <input className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-emerald-500 focus:outline-none transition font-mono"
+                  value={form.streamUrl} onChange={e => setForm({ ...form, streamUrl: e.target.value })} placeholder="https://ejemplo.com/stream.m3u8" />
               </div>
-
               <div>
                 <label className="block text-xs text-gray-500 mb-1.5">Descripción</label>
-                <textarea
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-emerald-500 focus:outline-none transition resize-none"
-                  rows={3}
-                  value={form.descripcion}
-                  onChange={e => setForm({ ...form, descripcion: e.target.value })}
-                  placeholder="Descripción del partido..."
-                />
+                <textarea className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-emerald-500 focus:outline-none transition resize-none"
+                  rows={3} value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} placeholder="Descripción del partido..." />
               </div>
             </div>
-
             <div className="px-6 py-4 border-t border-gray-800 flex justify-end gap-3">
-              <button
-                onClick={() => setModalOpen(false)}
-                className="px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition"
-              >
+              <button onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition">
                 Cancelar
               </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition flex items-center gap-2"
-              >
+              <button onClick={handleSave} disabled={saving}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition flex items-center gap-2">
                 {saving && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                 {editingPartido ? 'Guardar cambios' : 'Crear partido'}
               </button>
@@ -448,7 +475,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* MODAL CONFIRMAR ELIMINAR */}
+      {/* MODAL CONFIRMAR ELIMINAR PARTIDO */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-40 p-4">
           <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 text-center">
@@ -463,18 +490,30 @@ export default function AdminPage() {
               <br />Esta acción no se puede deshacer.
             </p>
             <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmDelete(null)}
-                className="flex-1 px-4 py-2 text-sm text-gray-400 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => handleDelete(confirmDelete._id)}
-                className="flex-1 px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-500 rounded-lg transition font-medium"
-              >
-                Eliminar
-              </button>
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 px-4 py-2 text-sm text-gray-400 bg-gray-800 hover:bg-gray-700 rounded-lg transition">Cancelar</button>
+              <button onClick={() => handleDeletePartido(confirmDelete._id)} className="flex-1 px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-500 rounded-lg transition font-medium">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMAR ELIMINAR USUARIO */}
+      {confirmDeleteUser && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-40 p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 text-center">
+            <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h3 className="font-bold text-white mb-2">¿Eliminar usuario?</h3>
+            <p className="text-sm text-gray-400 mb-6">
+              <span className="text-white">{confirmDeleteUser.name}</span> — {confirmDeleteUser.email}
+              <br />Esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDeleteUser(null)} className="flex-1 px-4 py-2 text-sm text-gray-400 bg-gray-800 hover:bg-gray-700 rounded-lg transition">Cancelar</button>
+              <button onClick={() => handleDeleteUser(confirmDeleteUser._id)} className="flex-1 px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-500 rounded-lg transition font-medium">Eliminar</button>
             </div>
           </div>
         </div>
