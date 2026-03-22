@@ -13,8 +13,8 @@ POST http://localhost:3000/api/login
 Content-Type: application/json
 
 {
-  "email": "a@mail.com",
-  "password": "1234567"
+  "email": "gms@mail.com",
+  "password": "123456"
 }
 
 ### CREAR PARTIDO (admin Bearer token)
@@ -50,7 +50,11 @@ Content-Type: application/json
 
 {
   "name": "Admin",
-  "email": "admin@streamfutbol.com",
-  "password": "admin1234",
+  "email": "gms@mail.com",
+  "password": "123456",
   "secretKey": "tfg_admin_2026"
 }
+
+### LISTA USUARIOS (solo admin)
+GET http://localhost:3000/api/admin/users
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJmYzEyZmYyYWEyNWQ3NTY4OTk0NDMiLCJlbWFpbCI6Imdtc0BtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc3NDE3NTAxOCwiZXhwIjoxNzc0Nzc5ODE4fQ.4Y0Vs0Z08iXE2Ln8BL2gLT9B3zJd3qLDjKup0AkjWIg
