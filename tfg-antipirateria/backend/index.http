@@ -45,8 +45,8 @@ Content-Type: application/json
 
 {
   "name": "Admin",
-  "email": "gms@mail.com",
-  "password": "123456",
+  "email": "a@mail.com",
+  "password": "1234567",
   "secretKey": "tfg_admin_2026"
 }
 
