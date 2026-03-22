@@ -3,8 +3,8 @@ POST http://localhost:3000/api/register
 Content-Type: application/json
 
 {
-  "name": "Gonzalo Test 3",
-  "email": "gonzalo3@test.com",
+  "name": "Gonzalo Test",
+  "email": "gonzalo@test.com",
   "password": "mipassword123"
 }
 
@@ -17,34 +17,29 @@ Content-Type: application/json
   "password": "123456"
 }
 
-### CREAR PARTIDO (admin Bearer token)
+### CREAR PARTIDO
 POST http://localhost:3000/api/partidos
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OThiMTcyODMwYzA1NDlmZDlkNjQxZWIiLCJlbWFpbCI6ImFAbWFpbC5jb20iLCJpYXQiOjE3NzA3MjM3NjEsImV4cCI6MTc3MTMyODU2MX0.7_3E2VUeUDbIxct8XpsiKs0jLrJaW53Duo9yK0tzaXw
+Authorization: Bearer PEGA_AQUI_TU_TOKEN_ADMIN
 Content-Type: application/json
 
 {
-  "equipoLocal": "Atlético de Madrid",
-  "equipoVisitante": "Rayo Vallecano", 
-  "fecha": "2026-02-15T17:30:00Z",
-  "descripcion": "El Clásico Jornada 22 LaLiga",
+  "equipoLocal": "Real Madrid",
+  "equipoVisitante": "Barcelona",
+  "fecha": "2026-06-15T21:00:00Z",
+  "descripcion": "El Clásico LaLiga",
   "streamUrl": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8"
 }
 
 ### LISTA PARTIDOS (público)
 GET http://localhost:3000/api/partidos
 
-### DETAIL PARTIDO
-GET http://localhost:3000/api/partidos/6989a23e7ffd007639c67975
-
+### DETALLE PARTIDO
+GET http://localhost:3000/api/partidos/ID_PARTIDO
 
 ### PARTIDO NO EXISTE (404)
 GET http://localhost:3000/api/partidos/123-no-existe
 
-###
-GET /api/test-role
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTg5OWQzNjdmZmQwMDc2MzljNjc5NmMiLCJlbWFpbCI6ImdvbnphbG8yQHRlc3QuY29tIiwiaWF0IjoxNzcwNjI4NjM1LCJleHAiOjE3NzEyMzM0MzV9.jzX49hFJUptOd8lQB9E8wSri1hd3J9lwM5CV19ZMbgQ
-
-### CREAR ADMIN
+### CREAR ADMIN (solo funciona si el email ya existe o no hay admin)
 POST http://localhost:3000/api/admin/create
 Content-Type: application/json
 
@@ -55,19 +50,19 @@ Content-Type: application/json
   "secretKey": "tfg_admin_2026"
 }
 
-### LISTA USUARIOS (solo admin)
+### LISTA USUARIOS (solo admin - actualizar el token)
 GET http://localhost:3000/api/admin/users
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJmYzEyZmYyYWEyNWQ3NTY4OTk0NDMiLCJlbWFpbCI6Imdtc0BtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc3NDE3NTAxOCwiZXhwIjoxNzc0Nzc5ODE4fQ.4Y0Vs0Z08iXE2Ln8BL2gLT9B3zJd3qLDjKup0AkjWIg
+Authorization: Bearer TOKEN
 
-### EDITAR PARTIDO (solo admin)
-PUT http://localhost:3000/api/admin/partidos/ID_DEL_PARTIDO
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJmYzEyZmYyYWEyNWQ3NTY4OTk0NDMiLCJlbWFpbCI6Imdtc0BtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc3NDE3NTAxOCwiZXhwIjoxNzc0Nzc5ODE4fQ.4Y0Vs0Z08iXE2Ln8BL2gLT9B3zJd3qLDjKup0AkjWIg
+### EDITAR PARTIDO (solo admin - cambiar el id y el token)
+PUT http://localhost:3000/api/admin/partidos/PEGA_AQUI_UN_ID_REAL
+Authorization: Bearer TOKEN
 Content-Type: application/json
 
 {
   "estado": "en-directo"
 }
 
-### ELIMINAR PARTIDO (solo admin)
-DELETE http://localhost:3000/api/admin/partidos/ID_DEL_PARTIDO
-Authorization: Bearer TU_TOKEN_ADMIN
+### ELIMINAR PARTIDO (solo admin - cambiar el id y el token)
+DELETE http://localhost:3000/api/admin/partidos/ID_PARTIDO
+Authorization: Bearer TOKEN
