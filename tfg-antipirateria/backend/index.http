@@ -23,9 +23,9 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OThiM
 Content-Type: application/json
 
 {
-  "equipoLocal": "Real Madrid",
-  "equipoVisitante": "Barcelona", 
-  "fecha": "2026-02-15T20:00:00Z",
+  "equipoLocal": "Atlético de Madrid",
+  "equipoVisitante": "Rayo Vallecano", 
+  "fecha": "2026-02-15T17:30:00Z",
   "descripcion": "El Clásico Jornada 22 LaLiga",
   "streamUrl": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8"
 }

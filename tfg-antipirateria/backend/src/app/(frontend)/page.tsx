@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import connectDB from '../../../lib/mongodb';
 import Partido from '../../../models/Partido';
+import UserMenu from '../../components/UserMenu';
 
 async function getPartidos() {
   await connectDB();
@@ -22,14 +23,10 @@ export default async function Home() {
       <header className="container mx-auto px-6 py-8">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">StreamFútbol</h1>
-          <div className="space-x-4">
-            <Link href="/login" className="bg-blue-600 px-6 py-2 rounded-lg hover:bg-blue-700 transition">
-              Iniciar Sesión
-            </Link>
-            <Link href="/register" className="bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-600 transition">
-              Registrarse
-            </Link>
-          </div>
+          
+          {}
+          <UserMenu />
+          
         </div>
       </header>
 

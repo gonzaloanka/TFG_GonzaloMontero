@@ -91,25 +91,13 @@ export default async function PartidoPage({ params }) {
           )}
         </div>
 
-        {/* INFO ADICIONAL */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2 bg-gray-900 p-6 rounded-xl border border-gray-800">
+        {/* INFO ADICIONAL (OCUPANDO TODO EL ANCHO) */}
+        <div className="mt-8">
+            <div className="w-full bg-gray-900 p-6 rounded-xl border border-gray-800">
                 <h3 className="text-lg font-bold text-white mb-3">Descripción del Encuentro</h3>
                 <p className="text-gray-400 leading-relaxed">
                     {partido.descripcion || "No hay descripción disponible para este evento. Sigue la retransmisión oficial para más detalles."}
                 </p>
-            </div>
-            
-            <div className="bg-gray-900 p-6 rounded-xl border border-gray-800 flex flex-col justify-between">
-                <div>
-                    <h3 className="text-lg font-bold text-white mb-3">Chat de Aficionados</h3>
-                    <div className="h-24 bg-gray-950 rounded border border-gray-800 flex items-center justify-center text-gray-600 text-sm">
-                        Chat desconectado
-                    </div>
-                </div>
-                <button className="mt-4 w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition text-sm font-medium" disabled>
-                    Iniciar sesión para comentar
-                </button>
             </div>
         </div>
 

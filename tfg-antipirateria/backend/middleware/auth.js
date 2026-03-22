@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'tfg_dev_secret_change_later';
 
-export function protegerRuta(req) {  // ← NOMBRE ESPAÑOL
+export function protegerRuta(req) {
   const authHeader = req.headers.get('authorization');
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
