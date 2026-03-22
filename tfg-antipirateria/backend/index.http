@@ -43,3 +43,14 @@ GET http://localhost:3000/api/partidos/123-no-existe
 ###
 GET /api/test-role
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTg5OWQzNjdmZmQwMDc2MzljNjc5NmMiLCJlbWFpbCI6ImdvbnphbG8yQHRlc3QuY29tIiwiaWF0IjoxNzcwNjI4NjM1LCJleHAiOjE3NzEyMzM0MzV9.jzX49hFJUptOd8lQB9E8wSri1hd3J9lwM5CV19ZMbgQ
+
+### CREAR ADMIN
+POST http://localhost:3000/api/admin/create
+Content-Type: application/json
+
+{
+  "name": "Admin",
+  "email": "admin@streamfutbol.com",
+  "password": "admin1234",
+  "secretKey": "tfg_admin_2026"
+}
