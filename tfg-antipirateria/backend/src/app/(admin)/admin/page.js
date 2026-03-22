@@ -290,7 +290,7 @@ export default function AdminPage() {
                         </div>
                         <p className="text-sm text-gray-500">
                           {new Date(partido.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          {partido.streamUrl && <span className="ml-3 text-emerald-600">● Stream activo</span>}
+                          {partido.streamUrl && partido.estado === 'en-directo' && <span className="ml-3 text-red-400">● Stream activo</span>}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">

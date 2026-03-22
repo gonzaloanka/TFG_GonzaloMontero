@@ -125,9 +125,15 @@ export default function CarreleraCliente({ partidos }) {
                   <p className="text-gray-500 text-sm truncate">{partido.descripcion}</p>
                 )}
 
-                {/* Footer tarjeta */}
-                <div className="flex items-center justify-end mt-4">
-                  <span className="text-xs text-gray-600 group-hover:text-emerald-500 transition flex items-center gap-1">
+                {/* Footer tarjeta — stream activo solo si está en directo */}
+                <div className="flex items-center justify-between mt-4">
+                  {partido.streamUrl && partido.estado === 'en-directo' && (
+                    <span className="text-xs text-red-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                      Stream activo
+                    </span>
+                  )}
+                  <span className="text-xs text-gray-600 group-hover:text-emerald-500 transition flex items-center gap-1 ml-auto">
                     Ver partido
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
