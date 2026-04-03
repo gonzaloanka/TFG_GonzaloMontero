@@ -66,3 +66,15 @@ Content-Type: application/json
 ### ELIMINAR PARTIDO (solo admin - cambiar el id y el token)
 DELETE http://localhost:3000/api/admin/partidos/ID_PARTIDO
 Authorization: Bearer TOKEN
+
+### Ver cuentas bloqueadas
+GET http://localhost:3000/api/admin/seguridad
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJmYzEyZmYyYWEyNWQ3NTY4OTk0NDMiLCJlbWFpbCI6Imdtc0BtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc3NTI0NzgzMywiZXhwIjoxNzc1ODUyNjMzfQ.O3YX8J0Rzag55EzDR_rVdC2svVDhqGJm62P-7yd7q-Y
+### Desbloquear usuario
+POST http://localhost:3000/api/admin/seguridad
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJmYzEyZmYyYWEyNWQ3NTY4OTk0NDMiLCJlbWFpbCI6Imdtc0BtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc3NTI0NzgzMywiZXhwIjoxNzc1ODUyNjMzfQ.O3YX8J0Rzag55EzDR_rVdC2svVDhqGJm62P-7yd7q-Y
+Content-Type: application/json
+
+{
+  "userId": "69cf87ce78327c6a96c33097"
+}

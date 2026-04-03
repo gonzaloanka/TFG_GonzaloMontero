@@ -6,14 +6,26 @@ function parseJwt(token) {
   try { return JSON.parse(atob(token.split('.')[1])); } catch { return null; }
 }
 
+function getSessionId() {
+  let sid = sessionStorage.getItem('streamSessionId');
+  if (!sid) {
+    sid = 'sess-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 10);
+    sessionStorage.setItem('streamSessionId', sid);
+  }
+  return sid;
+}
+
 export default function HLSPlayer({ streamUrl, estado, fecha }) {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
+  const heartbeatRef = useRef(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [started, setStarted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [blocked, setBlocked] = useState(false);
+  const [blockReason, setBlockReason] = useState('');
 
   useEffect(() => {
     setMounted(true);
@@ -26,10 +38,69 @@ export default function HLSPlayer({ streamUrl, estado, fecha }) {
     }
   }, []);
 
+  const iniciarHeartbeat = () => {
+    if (heartbeatRef.current) return;
+    const token = localStorage.getItem('token');
+    const sessionId = getSessionId();
+
+    const ping = async () => {
+      try {
+        const res = await fetch('/api/stream/acceso', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ sessionId }),
+        });
+        const data = await res.json();
+        if (!data.success && data.blocked) {
+          setBlocked(true);
+          setBlockReason(data.motivo || 'Acceso simultáneo detectado.');
+          detenerHeartbeat();
+          if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+          if (videoRef.current) { videoRef.current.pause(); videoRef.current.src = ''; }
+        }
+      } catch {}
+    };
+
+    ping();
+    heartbeatRef.current = setInterval(ping, 15000);
+  };
+
+  const detenerHeartbeat = () => {
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
+  };
+
   const handlePlay = async () => {
     if (!streamUrl || !videoRef.current) return;
+
+    const token = localStorage.getItem('token');
+    const sessionId = getSessionId();
+
+    try {
+      const res = await fetch('/api/stream/acceso', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ sessionId }),
+      });
+      const data = await res.json();
+      if (!data.success && data.blocked) {
+        setBlocked(true);
+        setBlockReason(data.motivo || 'Tu cuenta ha sido bloqueada por acceso simultáneo.');
+        return;
+      }
+    } catch {}
+
     setStarted(true);
     setLoading(true);
+    iniciarHeartbeat();
 
     const Hls = (await import('hls.js')).default;
 
@@ -38,19 +109,13 @@ export default function HLSPlayer({ streamUrl, estado, fecha }) {
       hlsRef.current = hls;
       hls.loadSource(streamUrl);
       hls.attachMedia(videoRef.current);
-
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         setLoading(false);
         videoRef.current.play().catch(() => {});
       });
-
       hls.on(Hls.Events.ERROR, (_, data) => {
-        if (data.fatal) {
-          setLoading(false);
-          setError('No se puede cargar el stream. Comprueba que la URL sea válida.');
-        }
+        if (data.fatal) { setLoading(false); setError('No se puede cargar el stream.'); }
       });
-
     } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
       videoRef.current.src = streamUrl;
       videoRef.current.addEventListener('loadedmetadata', () => {
@@ -69,18 +134,13 @@ export default function HLSPlayer({ streamUrl, estado, fecha }) {
 
   useEffect(() => {
     return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
+      detenerHeartbeat();
+      if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
     };
   }, []);
 
-  if (!mounted) {
-    return <div className="aspect-video w-full bg-gray-900 rounded-xl border border-gray-800 animate-pulse" />;
-  }
+  if (!mounted) return <div className="aspect-video w-full bg-gray-900 rounded-xl border border-gray-800 animate-pulse" />;
 
-  // ── PROGRAMADO ───────────────────────────────────────────────────────
   if (estado === 'programado') {
     return (
       <div className="aspect-video w-full bg-gray-900 rounded-xl border border-gray-800 flex flex-col items-center justify-center gap-4 text-center px-6">
@@ -102,7 +162,6 @@ export default function HLSPlayer({ streamUrl, estado, fecha }) {
     );
   }
 
-  // ── FINALIZADO ───────────────────────────────────────────────────────
   if (estado === 'finalizado') {
     return (
       <div className="aspect-video w-full bg-gray-900 rounded-xl border border-gray-800 flex flex-col items-center justify-center gap-4 text-center px-6">
@@ -119,7 +178,26 @@ export default function HLSPlayer({ streamUrl, estado, fecha }) {
     );
   }
 
-  // ── EN DIRECTO — no logueado ─────────────────────────────────────────
+  if (blocked) {
+    return (
+      <div className="relative aspect-video w-full bg-gray-900 rounded-xl border border-red-500/30 overflow-hidden flex flex-col items-center justify-center px-6 text-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-red-950/30 via-gray-950 to-black" />
+        <div className="relative">
+          <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">Cuenta bloqueada</h3>
+          <p className="text-gray-400 text-sm mb-4 max-w-sm mx-auto">{blockReason}</p>
+          <p className="text-gray-600 text-xs max-w-xs mx-auto">
+            Si crees que es un error, contacta con el administrador de la plataforma.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isLoggedIn) {
     return (
       <div className="relative aspect-video w-full bg-gray-900 rounded-xl border border-gray-800 overflow-hidden flex flex-col items-center justify-center">
@@ -147,7 +225,6 @@ export default function HLSPlayer({ streamUrl, estado, fecha }) {
     );
   }
 
-  // ── EN DIRECTO — logueado sin URL ────────────────────────────────────
   if (!streamUrl) {
     return (
       <div className="aspect-video w-full bg-gray-900 rounded-xl border border-gray-800 flex flex-col items-center justify-center gap-3">
@@ -161,35 +238,25 @@ export default function HLSPlayer({ streamUrl, estado, fecha }) {
     );
   }
 
-  // ── EN DIRECTO — logueado con URL ────────────────────────────────────
-  // El <video> siempre está en el DOM (oculto antes del play) para que el ref funcione
   return (
     <div className="relative aspect-video w-full bg-black rounded-xl border border-gray-800 overflow-hidden shadow-2xl">
-
-      {/* Pantalla de inicio — se muestra hasta que el usuario da play */}
       {!started && (
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-950 to-black flex items-center justify-center z-10">
           <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full text-xs font-bold text-white">
             <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
             EN VIVO
           </div>
-          <button
-            onClick={handlePlay}
-            className="group flex flex-col items-center gap-4"
-          >
+          <button onClick={handlePlay} className="group flex flex-col items-center gap-4">
             <div className="w-20 h-20 bg-emerald-600 rounded-full flex items-center justify-center group-hover:bg-emerald-500 group-hover:scale-110 transition-all duration-200 shadow-2xl shadow-emerald-900/50">
               <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
               </svg>
             </div>
-            <span className="text-white font-medium text-sm group-hover:text-emerald-400 transition">
-              Ver en directo
-            </span>
+            <span className="text-white font-medium text-sm group-hover:text-emerald-400 transition">Ver en directo</span>
           </button>
         </div>
       )}
 
-      {/* Spinner de carga */}
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black z-20">
           <div className="flex flex-col items-center gap-3">
@@ -199,7 +266,6 @@ export default function HLSPlayer({ streamUrl, estado, fecha }) {
         </div>
       )}
 
-      {/* Error */}
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black z-20 flex-col gap-3">
           <svg className="w-12 h-12 text-red-500 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -209,7 +275,6 @@ export default function HLSPlayer({ streamUrl, estado, fecha }) {
         </div>
       )}
 
-      {/* Badge EN VIVO cuando está reproduciendo */}
       {started && !loading && !error && (
         <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full text-xs font-bold text-white pointer-events-none z-10">
           <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
@@ -217,13 +282,7 @@ export default function HLSPlayer({ streamUrl, estado, fecha }) {
         </div>
       )}
 
-      {/* El video siempre está montado para que el ref funcione */}
-      <video
-        ref={videoRef}
-        className="w-full h-full"
-        controls
-        playsInline
-      />
+      <video ref={videoRef} className="w-full h-full" controls playsInline />
     </div>
   );
 }

@@ -37,6 +37,12 @@ export default function AdminPage() {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmDeleteUser, setConfirmDeleteUser] = useState(null);
 
+  // Seguridad
+  const [seguridad, setSeguridad] = useState({ bloqueados: [], sospechosos: [] });
+  const [loadingSeguridad, setLoadingSeguridad] = useState(false);
+  const [confirmDesbloqueo, setConfirmDesbloqueo] = useState(null);
+  const [expandedRisk, setExpandedRisk] = useState(null);
+
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
@@ -59,6 +65,19 @@ export default function AdminPage() {
     if (data.success) setUsers(data.users);
   }, []);
 
+  const fetchSeguridad = useCallback(async () => {
+    setLoadingSeguridad(true);
+    const token = getToken();
+    try {
+      const res = await fetch('/api/admin/seguridad', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) setSeguridad(data);
+    } catch {}
+    setLoadingSeguridad(false);
+  }, []);
+
   useEffect(() => {
     const token = getToken();
     if (!token) { router.push('/login'); return; }
@@ -68,65 +87,49 @@ export default function AdminPage() {
     Promise.all([fetchPartidos(), fetchUsers()]).finally(() => setLoading(false));
   }, [router, fetchPartidos, fetchUsers]);
 
-  // ── PARTIDOS ──────────────────────────────────────────────────────
-  const openCreate = () => {
-    setEditingPartido(null);
-    setForm(EMPTY_FORM);
-    setModalOpen(true);
-  };
+  useEffect(() => {
+    if (activeTab === 'seguridad') fetchSeguridad();
+  }, [activeTab, fetchSeguridad]);
 
+  // ── PARTIDOS ──────────────────────────────────────────────────────
+  const openCreate = () => { setEditingPartido(null); setForm(EMPTY_FORM); setModalOpen(true); };
   const openEdit = (partido) => {
     setEditingPartido(partido);
     setForm({
-      equipoLocal: partido.equipoLocal,
-      equipoVisitante: partido.equipoVisitante,
+      equipoLocal: partido.equipoLocal, equipoVisitante: partido.equipoVisitante,
       fecha: partido.fecha ? new Date(partido.fecha).toISOString().slice(0, 16) : '',
-      descripcion: partido.descripcion || '',
-      streamUrl: partido.streamUrl || '',
-      estado: partido.estado,
+      descripcion: partido.descripcion || '', streamUrl: partido.streamUrl || '', estado: partido.estado,
     });
     setModalOpen(true);
   };
 
   const handleSave = async () => {
     if (!form.equipoLocal || !form.equipoVisitante || !form.fecha) {
-      showToast('Equipos y fecha son obligatorios', 'error');
-      return;
+      showToast('Equipos y fecha son obligatorios', 'error'); return;
     }
     setSaving(true);
     const token = getToken();
     try {
       const res = editingPartido
         ? await fetch(`/api/admin/partidos/${editingPartido._id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify(form),
           })
         : await fetch('/api/partidos', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify(form),
           });
       const data = await res.json();
-      if (data.success) {
-        showToast(editingPartido ? 'Partido actualizado' : 'Partido creado');
-        setModalOpen(false);
-        fetchPartidos();
-      } else {
-        showToast(data.error || 'Error guardando', 'error');
-      }
-    } catch {
-      showToast('Error de conexión', 'error');
-    } finally {
-      setSaving(false);
-    }
+      if (data.success) { showToast(editingPartido ? 'Partido actualizado' : 'Partido creado'); setModalOpen(false); fetchPartidos(); }
+      else showToast(data.error || 'Error guardando', 'error');
+    } catch { showToast('Error de conexión', 'error'); }
+    finally { setSaving(false); }
   };
 
   const handleEstado = async (partido, nuevoEstado) => {
     const token = getToken();
     const res = await fetch(`/api/admin/partidos/${partido._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ estado: nuevoEstado }),
     });
     const data = await res.json();
@@ -135,51 +138,54 @@ export default function AdminPage() {
 
   const handleDeletePartido = async (id) => {
     const token = getToken();
-    const res = await fetch(`/api/admin/partidos/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await fetch(`/api/admin/partidos/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     const data = await res.json();
-    if (data.success) {
-      showToast('Partido eliminado');
-      setConfirmDelete(null);
-      fetchPartidos();
-    } else {
-      showToast(data.error || 'Error eliminando', 'error');
-    }
+    if (data.success) { showToast('Partido eliminado'); setConfirmDelete(null); fetchPartidos(); }
+    else showToast(data.error || 'Error eliminando', 'error');
   };
 
   // ── USUARIOS ──────────────────────────────────────────────────────
   const handleRoleChange = async (user, newRole) => {
     const token = getToken();
     const res = await fetch(`/api/admin/users/${user._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ role: newRole }),
     });
     const data = await res.json();
-    if (data.success) {
-      showToast(`Rol de ${user.name} actualizado a ${newRole}`);
-      fetchUsers();
-    } else {
-      showToast(data.error || 'Error actualizando rol', 'error');
-    }
+    if (data.success) { showToast(`Rol de ${user.name} actualizado a ${newRole}`); fetchUsers(); }
+    else showToast(data.error || 'Error actualizando rol', 'error');
   };
 
   const handleDeleteUser = async (id) => {
     const token = getToken();
-    const res = await fetch(`/api/admin/users/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     const data = await res.json();
-    if (data.success) {
-      showToast('Usuario eliminado');
-      setConfirmDeleteUser(null);
-      fetchUsers();
-    } else {
-      showToast(data.error || 'Error eliminando usuario', 'error');
-    }
+    if (data.success) { showToast('Usuario eliminado'); setConfirmDeleteUser(null); fetchUsers(); }
+    else showToast(data.error || 'Error eliminando usuario', 'error');
+  };
+
+  // ── SEGURIDAD ─────────────────────────────────────────────────────
+  const handleDesbloquear = async (userId, userName) => {
+    const token = getToken();
+    try {
+      const res = await fetch('/api/admin/seguridad', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Cuenta de ${userName} desbloqueada`);
+        setConfirmDesbloqueo(null);
+        fetchSeguridad();
+      } else showToast(data.error || 'Error desbloqueando', 'error');
+    } catch { showToast('Error de conexión', 'error'); }
+  };
+
+  const riskColor = (score) => {
+    if (score >= 50) return 'text-red-400';
+    if (score >= 25) return 'text-orange-400';
+    return 'text-yellow-400';
   };
 
   if (loading) {
@@ -222,6 +228,12 @@ export default function AdminPage() {
             <span>{partidos.length} partidos</span>
             <span>·</span>
             <span>{users.length} usuarios</span>
+            {seguridad.bloqueados.length > 0 && (
+              <>
+                <span>·</span>
+                <span className="text-red-400">{seguridad.bloqueados.length} bloqueados</span>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -230,8 +242,9 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto px-6 pt-6">
         <div className="flex gap-1 bg-gray-900 p-1 rounded-lg w-fit border border-gray-800">
           {[
-            { id: 'partidos', label: 'Partidos', count: partidos.length },
-            { id: 'usuarios', label: 'Usuarios', count: users.length },
+            { id: 'partidos', label: 'Partidos', count: partidos.length, color: 'emerald' },
+            { id: 'usuarios', label: 'Usuarios', count: users.length, color: 'emerald' },
+            { id: 'seguridad', label: 'Seguridad', count: seguridad.bloqueados.length, color: 'red' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -240,10 +253,19 @@ export default function AdminPage() {
                 activeTab === tab.id ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-300'
               }`}
             >
+              {tab.id === 'seguridad' && (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              )}
               {tab.label}
-              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                activeTab === tab.id ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-800 text-gray-500'
-              }`}>{tab.count}</span>
+              {tab.count > 0 && (
+                <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                  activeTab === tab.id
+                    ? tab.color === 'red' ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'
+                    : 'bg-gray-800 text-gray-500'
+                }`}>{tab.count}</span>
+              )}
             </button>
           ))}
         </div>
@@ -256,23 +278,17 @@ export default function AdminPage() {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold">Gestión de Partidos</h2>
-              <button
-                onClick={openCreate}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition"
-              >
+              <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 Nuevo Partido
               </button>
             </div>
-
             {partidos.length === 0 ? (
               <div className="text-center py-20 bg-gray-900 rounded-xl border border-gray-800">
                 <p className="text-gray-500 mb-4">No hay partidos todavía</p>
-                <button onClick={openCreate} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg transition">
-                  Crear el primero
-                </button>
+                <button onClick={openCreate} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg transition">Crear el primero</button>
               </div>
             ) : (
               <div className="space-y-3">
@@ -294,11 +310,8 @@ export default function AdminPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <select
-                          value={partido.estado}
-                          onChange={e => handleEstado(partido, e.target.value)}
-                          className="text-xs bg-gray-800 border border-gray-700 text-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:border-emerald-500 cursor-pointer"
-                        >
+                        <select value={partido.estado} onChange={e => handleEstado(partido, e.target.value)}
+                          className="text-xs bg-gray-800 border border-gray-700 text-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:border-emerald-500 cursor-pointer">
                           <option value="programado">Programado</option>
                           <option value="en-directo">En Directo</option>
                           <option value="finalizado">Finalizado</option>
@@ -344,11 +357,7 @@ export default function AdminPage() {
                       <tr key={user._id} className={`hover:bg-gray-800/30 transition ${i < users.length - 1 ? 'border-b border-gray-800/50' : ''}`}>
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-3">
-                            <img
-                              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user._id}`}
-                              alt="avatar"
-                              className="w-8 h-8 rounded-full bg-gray-800 border border-gray-700"
-                            />
+                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user._id}`} alt="avatar" className="w-8 h-8 rounded-full bg-gray-800 border border-gray-700" />
                             <div>
                               <p className="font-medium text-white">{user.name}</p>
                               {isCurrentUser && <p className="text-xs text-amber-400">Tú</p>}
@@ -358,12 +367,8 @@ export default function AdminPage() {
                         <td className="px-5 py-3 text-gray-400">{user.email}</td>
                         <td className="px-5 py-3">
                           <span className={`px-2 py-0.5 text-xs rounded-full border font-medium ${
-                            user.role === 'admin'
-                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                              : 'bg-gray-700/50 border-gray-700 text-gray-400'
-                          }`}>
-                            {user.role}
-                          </span>
+                            user.role === 'admin' ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-gray-700/50 border-gray-700 text-gray-400'
+                          }`}>{user.role}</span>
                         </td>
                         <td className="px-5 py-3 text-gray-500">
                           {new Date(user.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -372,25 +377,13 @@ export default function AdminPage() {
                           <div className="flex items-center justify-end gap-2">
                             {!isCurrentUser && (
                               <>
-                                {/* Cambiar rol */}
-                                <button
-                                  onClick={() => handleRoleChange(user, user.role === 'admin' ? 'user' : 'admin')}
+                                <button onClick={() => handleRoleChange(user, user.role === 'admin' ? 'user' : 'admin')}
                                   className={`px-3 py-1 text-xs rounded-lg border transition ${
-                                    user.role === 'admin'
-                                      ? 'border-gray-700 text-gray-400 hover:border-gray-600 hover:text-white'
-                                      : 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10'
-                                  }`}
-                                  title={user.role === 'admin' ? 'Quitar admin' : 'Hacer admin'}
-                                >
+                                    user.role === 'admin' ? 'border-gray-700 text-gray-400 hover:border-gray-600 hover:text-white' : 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10'
+                                  }`}>
                                   {user.role === 'admin' ? 'Quitar admin' : 'Hacer admin'}
                                 </button>
-
-                                {/* Eliminar */}
-                                <button
-                                  onClick={() => setConfirmDeleteUser(user)}
-                                  className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
-                                  title="Eliminar usuario"
-                                >
+                                <button onClick={() => setConfirmDeleteUser(user)} className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition">
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                   </svg>
@@ -405,6 +398,152 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* TAB SEGURIDAD */}
+        {activeTab === 'seguridad' && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">Panel de Seguridad Antipiratería</h2>
+              <button onClick={fetchSeguridad} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition border border-gray-700">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Actualizar
+              </button>
+            </div>
+
+            {loadingSeguridad ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <div className="space-y-8">
+
+                {/* Cuentas bloqueadas */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-2 h-2 bg-red-500 rounded-full" />
+                    <h3 className="font-semibold text-white">Cuentas bloqueadas</h3>
+                    <span className="text-xs px-2 py-0.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-full">{seguridad.bloqueados.length}</span>
+                  </div>
+
+                  {seguridad.bloqueados.length === 0 ? (
+                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
+                      <div className="w-10 h-10 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <p className="text-gray-500 text-sm">No hay cuentas bloqueadas actualmente</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {seguridad.bloqueados.map(u => (
+                        <div key={u._id} className="bg-gray-900 border border-red-500/20 rounded-xl overflow-hidden">
+                          <div className="p-5">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex items-center gap-3">
+                                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${u._id}`} alt="avatar" className="w-9 h-9 rounded-full bg-gray-800 border border-red-500/30" />
+                                <div>
+                                  <p className="font-medium text-white">{u.name}</p>
+                                  <p className="text-xs text-gray-500">{u.email}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className="text-right">
+                                  <p className={`text-lg font-bold ${riskColor(u.riskScore)}`}>{u.riskScore} pts</p>
+                                  <p className="text-xs text-gray-600">puntuación de riesgo</p>
+                                </div>
+                                <button onClick={() => setConfirmDesbloqueo(u)}
+                                  className="px-3 py-1.5 text-xs font-medium text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10 rounded-lg transition">
+                                  Desbloquear
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 text-xs text-gray-500">
+                              Bloqueado el {u.blockedAt ? new Date(u.blockedAt).toLocaleString('es-ES') : '—'}
+                            </div>
+
+                            {/* Historial de eventos */}
+                            {u.riskEvents && u.riskEvents.length > 0 && (
+                              <div className="mt-3">
+                                <button onClick={() => setExpandedRisk(expandedRisk === u._id ? null : u._id)}
+                                  className="text-xs text-gray-500 hover:text-gray-300 transition flex items-center gap-1">
+                                  <svg className={`w-3 h-3 transition-transform ${expandedRisk === u._id ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                  </svg>
+                                  Ver historial de eventos ({u.riskEvents.length})
+                                </button>
+                                {expandedRisk === u._id && (
+                                  <div className="mt-2 space-y-1.5 pl-2 border-l border-gray-800">
+                                    {u.riskEvents.map((ev, i) => (
+                                      <div key={i} className="flex items-start gap-2">
+                                        <span className="text-red-400 font-bold text-xs shrink-0">+{ev.puntos}</span>
+                                        <div>
+                                          <p className="text-xs text-gray-400">{ev.descripcion}</p>
+                                          <p className="text-xs text-gray-600">{new Date(ev.fecha).toLocaleString('es-ES')}</p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Sesiones activas sospechosas */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" />
+                    <h3 className="font-semibold text-white">Sesiones activas con riesgo</h3>
+                    <span className="text-xs px-2 py-0.5 bg-orange-500/10 border border-orange-500/30 text-orange-400 rounded-full">{seguridad.sospechosos.length}</span>
+                  </div>
+
+                  {seguridad.sospechosos.length === 0 ? (
+                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
+                      <p className="text-gray-500 text-sm">No hay sesiones sospechosas activas en este momento</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {seguridad.sospechosos.map(u => (
+                        <div key={u._id} className="bg-gray-900 border border-orange-500/20 rounded-xl p-5">
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <p className="font-medium text-white">{u.name}</p>
+                              <p className="text-xs text-gray-500">{u.email}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className={`text-lg font-bold ${riskColor(u.riskScore)}`}>{u.riskScore} pts</p>
+                              <p className="text-xs text-gray-600">{u.sesionesActivas} sesión{u.sesionesActivas > 1 ? 'es' : ''} activa{u.sesionesActivas > 1 ? 's' : ''}</p>
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            {u.sesiones.map((s, i) => (
+                              <div key={i} className="flex items-center gap-3 text-xs bg-gray-800/50 rounded-lg px-3 py-2">
+                                <span className="text-gray-500 font-mono">{s.ip}</span>
+                                <span className="text-gray-600">·</span>
+                                <span className="text-gray-400">{s.ciudad !== 'Localhost' ? `${s.ciudad}, ${s.pais}` : 'Localhost (dev)'}</span>
+                                <span className="text-gray-600">·</span>
+                                <span className="text-gray-500">Activa hace {Math.round((Date.now() - new Date(s.ultimaActividad)) / 1000)}s</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -462,9 +601,7 @@ export default function AdminPage() {
               </div>
             </div>
             <div className="px-6 py-4 border-t border-gray-800 flex justify-end gap-3">
-              <button onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition">
-                Cancelar
-              </button>
+              <button onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition">Cancelar</button>
               <button onClick={handleSave} disabled={saving}
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition flex items-center gap-2">
                 {saving && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
@@ -518,6 +655,34 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL CONFIRMAR DESBLOQUEO */}
+      {confirmDesbloqueo && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-40 p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 text-center">
+            <div className="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h3 className="font-bold text-white mb-2">¿Desbloquear cuenta?</h3>
+            <p className="text-sm text-gray-400 mb-2">
+              <span className="text-white">{confirmDesbloqueo.name}</span> — {confirmDesbloqueo.email}
+            </p>
+            <p className="text-xs text-gray-600 mb-6">
+              Se reiniciará la puntuación de riesgo ({confirmDesbloqueo.riskScore} pts) y el historial de eventos.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDesbloqueo(null)} className="flex-1 px-4 py-2 text-sm text-gray-400 bg-gray-800 hover:bg-gray-700 rounded-lg transition">Cancelar</button>
+              <button onClick={() => handleDesbloquear(confirmDesbloqueo._id, confirmDesbloqueo.name)}
+                className="flex-1 px-4 py-2 text-sm text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg transition font-medium">
+                Desbloquear
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
