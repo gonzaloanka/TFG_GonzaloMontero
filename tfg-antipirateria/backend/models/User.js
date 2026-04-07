@@ -44,16 +44,13 @@ const userSchema = new mongoose.Schema({
     default: false,
   },
 
-  // ── Ciberseguridad: bloqueo ───────────────────────────────────────
   isBlocked:   { type: Boolean, default: false },
   blockReason: { type: String,  default: null },
   blockedAt:   { type: Date,    default: null },
 
-  // ── Ciberseguridad: puntuación de riesgo acumulativa ─────────────
   riskScore:  { type: Number, default: 0 },
   riskEvents: { type: [riskEventSchema], default: [] },
 
-  // ── Ciberseguridad: sesiones activas en tiempo real ───────────────
   activeSessions: { type: [sessionSchema], default: [] },
 
 }, { timestamps: true });
