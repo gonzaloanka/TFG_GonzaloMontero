@@ -3,7 +3,10 @@ import { NextResponse } from 'next/server';
 import connectDB from '../lib/mongodb';
 import User from '../models/User';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'tfg_dev_secret_change_later';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('Falta la variable de entorno JWT_SECRET');
+}
 
 export function protegerRuta(req) {
   const authHeader = req.headers.get('authorization');

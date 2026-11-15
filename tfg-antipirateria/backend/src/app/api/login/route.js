@@ -3,7 +3,10 @@ import User from '../../../../models/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'tfg_dev_secret_change_later';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('Falta la variable de entorno JWT_SECRET');
+}
 
 export async function POST(request) {
   try {

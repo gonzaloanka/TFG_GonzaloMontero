@@ -12,8 +12,9 @@ export async function POST(request) {
 
     const { name, email, password, secretKey } = await request.json();
 
-    // Verificar clave secreta
-    if (secretKey !== process.env.ADMIN_SECRET_KEY) {
+    // Verificar clave secreta (si no está configurada, el endpoint queda deshabilitado)
+    const adminKey = process.env.ADMIN_SECRET_KEY;
+    if (!adminKey || secretKey !== adminKey) {
       return Response.json(
         { success: false, error: 'Clave secreta incorrecta' },
         { status: 401 }
