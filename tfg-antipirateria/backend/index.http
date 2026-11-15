@@ -47,7 +47,7 @@ Content-Type: application/json
   "name": "Admin",
   "email": "a@mail.com",
   "password": "1234567",
-  "secretKey": "tfg_admin_2026"
+  "secretKey": "<ADMIN_SECRET_KEY>"
 }
 
 ### LISTA USUARIOS (solo admin - actualizar el token)
